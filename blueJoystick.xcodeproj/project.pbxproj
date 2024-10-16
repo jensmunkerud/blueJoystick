@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B4C1ACF22CC0471C005172FB /* CoreBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B4C1ACF12CC0471C005172FB /* CoreBluetooth.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		B42A55152CC03A5500974694 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		B42A54FE2CC03A5400974694 /* blueJoystick.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = blueJoystick.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B42A55142CC03A5500974694 /* blueJoystickTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = blueJoystickTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B42A551E2CC03A5500974694 /* blueJoystickUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = blueJoystickUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B4C1ACF12CC0471C005172FB /* CoreBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreBluetooth.framework; path = System/Library/Frameworks/CoreBluetooth.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -65,6 +70,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B4C1ACF22CC0471C005172FB /* CoreBluetooth.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -91,6 +97,7 @@
 				B42A55002CC03A5400974694 /* blueJoystick */,
 				B42A55172CC03A5500974694 /* blueJoystickTests */,
 				B42A55212CC03A5500974694 /* blueJoystickUITests */,
+				B4C1ACF02CC0471C005172FB /* Frameworks */,
 				B42A54FF2CC03A5400974694 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -103,6 +110,14 @@
 				B42A551E2CC03A5500974694 /* blueJoystickUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B4C1ACF02CC0471C005172FB /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B4C1ACF12CC0471C005172FB /* CoreBluetooth.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -289,6 +304,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9MXM498449;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = blueJoystick/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -316,6 +332,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9MXM498449;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = blueJoystick/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
