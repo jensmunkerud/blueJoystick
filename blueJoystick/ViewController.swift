@@ -1,10 +1,3 @@
-//
-//  ViewController.swift
-//  blueJoystick
-//
-//  Created by Jens Munkerud on 16/10/2024.
-//
-
 import UIKit
 import CoreBluetooth
 
@@ -22,10 +15,14 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     var tableView: UITableView!
     
     // Interval for sending X Y coordinate
-    let sendInterval: TimeInterval = 1.0  // 1000ms or 1 second
+    let sendInterval: TimeInterval = 0.5  // 1000ms or 1 second
 
     // Timer for sending Bluetooth packets
     var sendTimer: Timer?
+    
+    // Variables to store the latest joystick values
+    var latestXValue: CGFloat = 0.0
+    var latestYValue: CGFloat = 0.0
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -54,10 +51,11 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         // Center the joystick in the middle of the screen
         joystick.center = view.center
 
-        // Handle joystick movements and send to Bluetooth device
-        joystick.joystickMoved = { (xValue, yValue) in
-            print("Joystick moved: X: \(xValue), Y: \(yValue)")
-        // Doesnt actually send data here, waits for timer to handle that
+        // Handle joystick movements and store values
+        joystick.joystickMoved = { [weak self] (xValue, yValue) in
+            // Store the latest values in the properties
+            self?.latestXValue = xValue
+            self?.latestYValue = yValue
         }
 
         // Add the joystick to the main view
@@ -80,13 +78,8 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     
     // This method will be called every interval to send the joystick data
     @objc func sendCurrentJoystickData() {
-        guard let joystick = view.subviews.first(where: { $0 is JoystickView }) as? JoystickView else {
-            return
-        }
-        // Get the current joystick values and send them
-            joystick.joystickMoved = { (xValue, yValue) in
-                self.sendJoystickData(xValue: xValue, yValue: yValue)
-        }
+        // Send the stored joystick values
+        sendJoystickData(xValue: latestXValue, yValue: latestYValue)
     }
     
     @objc func startScanning() {
