@@ -20,7 +20,13 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
 
     // UITableView to display nearby devices
     var tableView: UITableView!
+    
+    // Interval for sending X Y coordinate
+    let sendInterval: TimeInterval = 1.0  // 1000ms or 1 second
 
+    // Timer for sending Bluetooth packets
+    var sendTimer: Timer?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -51,13 +57,38 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         // Handle joystick movements and send to Bluetooth device
         joystick.joystickMoved = { (xValue, yValue) in
             print("Joystick moved: X: \(xValue), Y: \(yValue)")
-            self.sendJoystickData(xValue: xValue, yValue: yValue)
+        // Doesnt actually send data here, waits for timer to handle that
         }
 
         // Add the joystick to the main view
         view.addSubview(joystick)
+        
+        // Start the timer to send joystick data every interval
+        startSendTimer()
     }
 
+    // Method to start a timer that triggers every 'sendInterval' seconds
+    func startSendTimer() {
+        sendTimer = Timer.scheduledTimer(timeInterval: sendInterval, target: self, selector: #selector(sendCurrentJoystickData), userInfo: nil, repeats: true)
+    }
+    
+    // Method to stop the timer if needed (e.g., when disconnected)
+    func stopSendTimer() {
+        sendTimer?.invalidate()
+        sendTimer = nil
+    }
+    
+    // This method will be called every interval to send the joystick data
+    @objc func sendCurrentJoystickData() {
+        guard let joystick = view.subviews.first(where: { $0 is JoystickView }) as? JoystickView else {
+            return
+        }
+        // Get the current joystick values and send them
+            joystick.joystickMoved = { (xValue, yValue) in
+                self.sendJoystickData(xValue: xValue, yValue: yValue)
+        }
+    }
+    
     @objc func startScanning() {
         if centralManager.state == .poweredOn {
             discoveredPeripherals.removeAll()  // Clear previously discovered devices
@@ -170,18 +201,25 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
             return
         }
 
-        // Send X value to the X characteristic
+        // Convert joystick values to Int16 (-127 to 127)
+        let xIntValue = Int8(xValue * 127)
+        let yIntValue = Int8(-yValue * 127)
+
+        // Send X value as Int16 (2 bytes)
         if let xCharacteristic = xCharacteristic {
-            let xData = "\(xValue)".data(using: .utf8)!
-            peripheral.writeValue(xData, for: xCharacteristic, type: .withResponse)
-            print("Sent X data: \(xValue)")
+            var xData = xIntValue
+            let xDataBytes = Data(bytes: &xData, count: MemoryLayout<Int8>.size)
+            peripheral.writeValue(xDataBytes, for: xCharacteristic, type: .withResponse)
+            print("Sent X data: \(xIntValue)")
         }
 
-        // Send Y value to the Y characteristic
+        // Send Y value as Int16 (2 bytes)
         if let yCharacteristic = yCharacteristic {
-            let yData = "\(yValue)".data(using: .utf8)!
-            peripheral.writeValue(yData, for: yCharacteristic, type: .withResponse)
-            print("Sent Y data: \(yValue)")
+            var yData = yIntValue
+            let yDataBytes = Data(bytes: &yData, count: MemoryLayout<Int8>.size)
+            peripheral.writeValue(yDataBytes, for: yCharacteristic, type: .withResponse)
+            print("Sent Y data: \(yIntValue)")
         }
     }
+
 }
