@@ -31,7 +31,7 @@ class JoystickView: UIView {
     private func setupJoystick() {
         // Setup the base view (circular base)
         baseView.frame = CGRect(x: 0, y: 0, width: baseRadius * 2, height: baseRadius * 2)
-        baseView.center = CGPoint(x: bounds.midX + 20, y: bounds.midY + 20)
+        baseView.center = CGPoint(x: bounds.midX, y: bounds.midY + 20)
         baseView.layer.cornerRadius = baseRadius
         baseView.backgroundColor = .lightGray
         baseView.alpha = 0.6
@@ -51,7 +51,7 @@ class JoystickView: UIView {
     
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
         let translation = gesture.translation(in: self)
-        let baseCenter = CGPoint(x: bounds.midX + 20, y: bounds.midY + 20)
+        let baseCenter = CGPoint(x: bounds.midX, y: bounds.midY + 20)
         
         let distance = sqrt(pow(translation.x, 2) + pow(translation.y, 2))
         let maxDistance = baseRadius

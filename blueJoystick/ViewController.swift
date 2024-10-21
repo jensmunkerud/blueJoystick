@@ -7,86 +7,186 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     var discoveredPeripherals: [CBPeripheral] = []
     var peripheral: CBPeripheral?
     
-    // Bluetooth characteristics for X and Y coordinates
     var xCharacteristic: CBCharacteristic?
     var yCharacteristic: CBCharacteristic?
 
-    // UITableView to display nearby devices
     var tableView: UITableView!
     
-    // Interval for sending X Y coordinate
-    let sendInterval: TimeInterval = 0.5  // 1000ms or 1 second
-
-    // Timer for sending Bluetooth packets
+    let sendInterval: TimeInterval = 0.5
     var sendTimer: Timer?
-    
-    // Variables to store the latest joystick values
+
     var latestXValue: CGFloat = 0.0
     var latestYValue: CGFloat = 0.0
-    
+
+    // UI elements
+    var joystick: JoystickView!
+    var verticalSlider: UISlider!
+    var horizontalSlider: UISlider!
+    var controlModeToggleButton: UIButton!
+    var isJoystickMode = true  // Keeps track of current mode (joystick or sliders)
+    var xyLabel: UILabel!  // Label to display current X and Y values
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Initialize CBCentralManager for Bluetooth functionality
+        // Initialize Bluetooth CentralManager
         centralManager = CBCentralManager(delegate: self, queue: nil)
 
-        // Create a Bluetooth scan button in the top-left corner
+        // Add Scan Button
         let scanButton = UIButton(type: .system)
-        scanButton.frame = CGRect(x: 20, y: 50, width: 100, height: 30)  // Adjust as needed
+        scanButton.frame = CGRect(x: 20, y: 50, width: 100, height: 30)
         scanButton.setTitle("Scan", for: .normal)
         scanButton.addTarget(self, action: #selector(startScanning), for: .touchUpInside)
         view.addSubview(scanButton)
 
-        // Create a UITableView to display Bluetooth devices
+        // TableView for Bluetooth devices
         tableView = UITableView(frame: view.bounds, style: .plain)
         tableView.delegate = self
         tableView.dataSource = self
-        tableView.isHidden = true  // Initially hidden until devices are discovered
+        tableView.isHidden = true
         view.addSubview(tableView)
 
-        // Create an instance of JoystickView
-        let joystickSize: CGFloat = 200
-        let joystick = JoystickView(frame: CGRect(x: 0, y: 0, width: joystickSize, height: joystickSize))
+        // Setup joystick
+        setupJoystick()
 
-        // Center the joystick in the middle of the screen
-        joystick.center = view.center
+        // Setup sliders
+        setupSliders()
 
-        // Handle joystick movements and store values
-        joystick.joystickMoved = { [weak self] (xValue, yValue) in
-            // Store the latest values in the properties
-            self?.latestXValue = xValue
-            self?.latestYValue = yValue
-        }
+        // Toggle button for switching between joystick and sliders
+        setupToggleControlButton()
 
-        // Add the joystick to the main view
-        view.addSubview(joystick)
-        
-        // Start the timer to send joystick data every interval
+        // Setup label to display current X and Y values
+        setupXYLabel()
+
+        // Start the timer to send joystick/slider data at intervals
         startSendTimer()
     }
 
-    // Method to start a timer that triggers every 'sendInterval' seconds
+    func setupJoystick() {
+        let joystickSize: CGFloat = 200
+        joystick = JoystickView(frame: CGRect(x: 0, y: 0, width: joystickSize, height: joystickSize))
+        joystick.center = view.center
+        joystick.joystickMoved = { [weak self] (xValue, yValue) in
+            self?.latestXValue = xValue
+            self?.latestYValue = -yValue
+            self?.updateXYLabel()  // Update the X and Y values on the screen
+        }
+        view.addSubview(joystick)
+    }
+
+    func setupSliders() {
+        let sliderLength: CGFloat = 300
+
+        // Vertical Slider (extended)
+        verticalSlider = UISlider(frame: CGRect(x: view.bounds.midX - 150, y: view.bounds.midY - sliderLength / 1.5, width: sliderLength, height: sliderLength / 2)) // Extended length
+        verticalSlider.minimumValue = -1.0
+        verticalSlider.maximumValue = 1.0
+        verticalSlider.value = 0.0
+        verticalSlider.transform = CGAffineTransform(rotationAngle: CGFloat(-Double.pi / 2))  // Rotate to vertical
+        verticalSlider.addTarget(self, action: #selector(sliderChanged), for: .valueChanged)
+        verticalSlider.isContinuous = true
+        verticalSlider.setThumbImage(UIImage(systemName: "circle.fill"), for: .normal)  // Set thumb image for consistency
+        verticalSlider.isHidden = true
+        view.addSubview(verticalSlider)
+
+        // Horizontal Slider
+        horizontalSlider = UISlider(frame: CGRect(x: view.bounds.midX - sliderLength / 2, y: view.bounds.midY + 100, width: sliderLength, height: 40))
+        horizontalSlider.minimumValue = -1.0
+        horizontalSlider.maximumValue = 1.0
+        horizontalSlider.value = 0.0
+        horizontalSlider.addTarget(self, action: #selector(sliderChanged), for: .valueChanged)
+        horizontalSlider.isContinuous = true
+        horizontalSlider.setThumbImage(UIImage(systemName: "circle.fill"), for: .normal)  // Set thumb image for consistency
+        horizontalSlider.isHidden = true
+        view.addSubview(horizontalSlider)
+
+        // Apply the middle progress color from the middle
+        applyMiddleProgressStyle(for: verticalSlider)
+        applyMiddleProgressStyle(for: horizontalSlider)
+    }
+
+    func setupToggleControlButton() {
+        controlModeToggleButton = UIButton(type: .system)
+        controlModeToggleButton.frame = CGRect(x: view.bounds.width - 120, y: 50, width: 100, height: 30)
+        controlModeToggleButton.setTitle("Sliders", for: .normal)
+        controlModeToggleButton.addTarget(self, action: #selector(toggleControlMode), for: .touchUpInside)
+        view.addSubview(controlModeToggleButton)
+    }
+
+    func setupXYLabel() {
+        xyLabel = UILabel(frame: CGRect(x: view.bounds.midX - 100, y: 120, width: 200, height: 30))
+        xyLabel.textAlignment = .center
+        xyLabel.font = UIFont.boldSystemFont(ofSize: 18)
+        xyLabel.text = "X: 0.00, Y: 0.00"
+        view.addSubview(xyLabel)
+    }
+
+    func updateXYLabel() {
+        xyLabel.text = String(format: "X: %.2f, Y: %.2f", latestXValue, latestYValue)
+    }
+
+    @objc func toggleControlMode() {
+        isJoystickMode.toggle()
+
+        // Switch between joystick and sliders
+        if isJoystickMode {
+            controlModeToggleButton.setTitle("Sliders", for: .normal)
+            joystick.isHidden = false
+            verticalSlider.isHidden = true
+            horizontalSlider.isHidden = true
+        } else {
+            controlModeToggleButton.setTitle("Joystick", for: .normal)
+            joystick.isHidden = true
+            verticalSlider.isHidden = false
+            horizontalSlider.isHidden = false
+
+            // Reset sliders to center when mode is switched to sliders
+            resetSliders()
+        }
+    }
+
+    @objc func sliderChanged() {
+        // Update X and Y values based on slider positions
+        latestXValue = CGFloat(horizontalSlider.value)
+        latestYValue = CGFloat(verticalSlider.value)
+
+        updateXYLabel()  // Update the label with the new X and Y values
+    }
+
+    func resetSliders() {
+        // Reset sliders to center (value 0.0)
+        verticalSlider.value = 0.0
+        horizontalSlider.value = 0.0
+
+        // Reset the latest values to 0 as well
+        latestXValue = 0.0
+        latestYValue = 0.0
+
+        updateXYLabel()
+    }
+
+    func applyMiddleProgressStyle(for slider: UISlider) {
+        let minimumTrackColor = UIColor.blue
+        let maximumTrackColor = UIColor.blue.withAlphaComponent(0.3)
+
+        // Set the minimum track color to blue and maximum track color to transparent blue
+        slider.minimumTrackTintColor = minimumTrackColor
+        slider.maximumTrackTintColor = maximumTrackColor
+    }
+
     func startSendTimer() {
         sendTimer = Timer.scheduledTimer(timeInterval: sendInterval, target: self, selector: #selector(sendCurrentJoystickData), userInfo: nil, repeats: true)
     }
-    
-    // Method to stop the timer if needed (e.g., when disconnected)
-    func stopSendTimer() {
-        sendTimer?.invalidate()
-        sendTimer = nil
-    }
-    
-    // This method will be called every interval to send the joystick data
+
     @objc func sendCurrentJoystickData() {
-        // Send the stored joystick values
         sendJoystickData(xValue: latestXValue, yValue: latestYValue)
     }
-    
+
     @objc func startScanning() {
         if centralManager.state == .poweredOn {
-            discoveredPeripherals.removeAll()  // Clear previously discovered devices
-            tableView.reloadData()  // Clear the table view
-            centralManager.scanForPeripherals(withServices: nil, options: nil)  // Start scanning
+            discoveredPeripherals.removeAll()
+            tableView.reloadData()
+            centralManager.scanForPeripherals(withServices: nil, options: nil)
             print("Scanning for devices...")
         } else {
             print("Bluetooth is not available.")
@@ -196,7 +296,7 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
 
         // Convert joystick values to Int16 (-127 to 127)
         let xIntValue = Int8(xValue * 127)
-        let yIntValue = Int8(-yValue * 127)
+        let yIntValue = Int8(yValue * 127)
 
         // Send X value as Int16 (2 bytes)
         if let xCharacteristic = xCharacteristic {
