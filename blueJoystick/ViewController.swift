@@ -209,7 +209,13 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
 
     // CBCentralManagerDelegate method: Called when a peripheral is discovered
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        print("Discovered: \(peripheral.name ?? "Unnamed device")")
+        // Check if the device has a name and skip unnamed devices
+        guard let name = peripheral.name, !name.isEmpty else {
+            print("Skipped unnamed device")
+            return
+        }
+        
+        print("Discovered: \(name)")
 
         // Check if the peripheral is already in the list
         if !discoveredPeripherals.contains(peripheral) {
@@ -220,6 +226,7 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         // Show the tableView once devices are discovered
         tableView.isHidden = false
     }
+
 
     // UITableViewDataSource methods
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
