@@ -134,6 +134,8 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
             joystick.isHidden = false
             verticalSlider.isHidden = true
             horizontalSlider.isHidden = true
+            resetSliders()
+            
         } else {
             controlModeToggleButton.setTitle("Joystick", for: .normal)
             joystick.isHidden = true
