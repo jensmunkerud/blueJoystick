@@ -11,9 +11,6 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     var yCharacteristic: CBCharacteristic?
 
     var tableView: UITableView!
-    
-    let sendInterval: TimeInterval = 0.5
-    var sendTimer: Timer?
 
     var latestXValue: CGFloat = 0.0
     var latestYValue: CGFloat = 0.0
@@ -58,8 +55,6 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         // Setup label to display current X and Y values
         setupXYLabel()
 
-        // Start the timer to send joystick/slider data at intervals
-        startSendTimer()
     }
 
     func setupJoystick() {
@@ -67,9 +62,11 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         joystick = JoystickView(frame: CGRect(x: 0, y: 0, width: joystickSize, height: joystickSize))
         joystick.center = view.center
         joystick.joystickMoved = { [weak self] (xValue, yValue) in
-            self?.latestXValue = xValue
-            self?.latestYValue = -yValue
-            self?.updateXYLabel()  // Update the X and Y values on the screen
+            guard let self = self else { return }
+            self.latestXValue = xValue
+            self.latestYValue = -yValue
+            self.updateXYLabel()  // Update the X and Y values on the screen
+            self.sendJoystickData(xValue: xValue, yValue: -yValue)  // Send immediately
         }
         view.addSubview(joystick)
     }
@@ -145,14 +142,16 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
             // Reset sliders to center when mode is switched to sliders
             resetSliders()
         }
+        sendJoystickData(xValue: 0, yValue: 0)  // Send immediately
     }
-
+    
     @objc func sliderChanged() {
         // Update X and Y values based on slider positions
         latestXValue = CGFloat(horizontalSlider.value)
         latestYValue = CGFloat(verticalSlider.value)
-
+        
         updateXYLabel()  // Update the label with the new X and Y values
+        sendJoystickData(xValue: latestXValue, yValue: latestYValue)  // Send immediately
     }
 
     func resetSliders() {
@@ -174,14 +173,6 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         // Set the minimum track color to blue and maximum track color to transparent blue
         slider.minimumTrackTintColor = minimumTrackColor
         slider.maximumTrackTintColor = maximumTrackColor
-    }
-
-    func startSendTimer() {
-        sendTimer = Timer.scheduledTimer(timeInterval: sendInterval, target: self, selector: #selector(sendCurrentJoystickData), userInfo: nil, repeats: true)
-    }
-
-    @objc func sendCurrentJoystickData() {
-        sendJoystickData(xValue: latestXValue, yValue: latestYValue)
     }
 
     @objc func startScanning() {
@@ -296,32 +287,43 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         }
     }
 
-    // Method to send joystick data to the connected Bluetooth device
+    var writeQueue: [(CGFloat, CGFloat)] = []
+    var isWriting = false
+
     func sendJoystickData(xValue: CGFloat, yValue: CGFloat) {
-        guard let peripheral = peripheral else {
-            print("No Bluetooth device connected.")
-            return
-        }
+        // Queue the new data
+        writeQueue.append((xValue, yValue))
+        processWriteQueue()
+    }
 
-        // Convert joystick values to Int16 (-127 to 127)
-        let xIntValue = Int8(xValue * 127)
-        let yIntValue = Int8(yValue * 127)
+    func processWriteQueue() {
+        guard !isWriting, let peripheral = peripheral else { return }
 
-        // Send X value as Int16 (2 bytes)
-        if let xCharacteristic = xCharacteristic {
-            var xData = xIntValue
-            let xDataBytes = Data(bytes: &xData, count: MemoryLayout<Int8>.size)
-            peripheral.writeValue(xDataBytes, for: xCharacteristic, type: .withResponse)
-            print("Sent X data: \(xIntValue)")
-        }
+        if !writeQueue.isEmpty {
+            let (xValue, yValue) = writeQueue.removeFirst()
+            
+            // Convert joystick values to Int8 (-127 to 127)
+            let xIntValue = Int16(xValue * 255)
+            let yIntValue = Int16(yValue * 255)
 
-        // Send Y value as Int16 (2 bytes)
-        if let yCharacteristic = yCharacteristic {
-            var yData = yIntValue
-            let yDataBytes = Data(bytes: &yData, count: MemoryLayout<Int8>.size)
-            peripheral.writeValue(yDataBytes, for: yCharacteristic, type: .withResponse)
-            print("Sent Y data: \(yIntValue)")
+            // Send X and Y data without waiting for acknowledgment
+            if let xCharacteristic = xCharacteristic, let yCharacteristic = yCharacteristic {
+                isWriting = true
+                var xData = xIntValue
+                var yData = yIntValue
+                let xDataBytes = Data(bytes: &xData, count: MemoryLayout<Int16>.size)
+                let yDataBytes = Data(bytes: &yData, count: MemoryLayout<Int16>.size)
+                
+                peripheral.writeValue(xDataBytes, for: xCharacteristic, type: .withoutResponse)
+                peripheral.writeValue(yDataBytes, for: yCharacteristic, type: .withoutResponse)
+                
+                print("Sent X data: \(xIntValue), Y data: \(yIntValue)")
+                
+                // Reset writing state after sending
+                isWriting = false
+            }
         }
     }
+
 
 }
