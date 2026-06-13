@@ -6,27 +6,23 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     var centralManager: CBCentralManager!
     var discoveredPeripherals: [CBPeripheral] = []
     var peripheral: CBPeripheral?
+    var tableView: UITableView!
+    var scanButton: UIButton!
+    let lightBlue = UIColor(red: 0.68, green: 0.85, blue: 1.0, alpha: 1.0)
     
+    // Remove these as they are static not dynamic..
     var xCharacteristic: CBCharacteristic?
     var yCharacteristic: CBCharacteristic?
     var extendInnerCharacteristic: CBCharacteristic?
     var extendOuterCharacteristic: CBCharacteristic?
     var controlCharacteristic: CBCharacteristic?
     var stageCharacteristic: CBCharacteristic?
-    
-    var tableView: UITableView!
-    var scanButton: UIButton!
-    
-    let lightBlue = UIColor(red: 0.68, green: 0.85, blue: 1.0, alpha: 1.0)
-    
     var smoothToggleButton: UIButton!
     var upperButton: UIButton!
     var lowerButton: UIButton!
     var isSmoothMode = true // Track the state of Smooth/Instant mode
     var upperSelected = true
     var lowerSelected = true
-
-    
     var retractIButton: UIButton!
     var extendIButton: UIButton!
     var retractOButton: UIButton!
@@ -50,10 +46,12 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
     var controlModeToggleButton: UIButton!
     var isJoystickMode = false  // Keeps track of current mode (joystick or sliders)
     var xyLabel: UILabel!  // Label to display current X and Y values
+    var textField: UITextField! // temporary for UUID testing
+
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
         // Initialize Bluetooth CentralManager
         centralManager = CBCentralManager(delegate: self, queue: nil)
         
@@ -94,6 +92,17 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
         setupUpperLowerButtons()
         
         view.bringSubviewToFront(tableView)
+        
+        
+        // Temp textfield on the top for UUID
+        textField = UITextField(frame: CGRect(x: 20, y: 100, width: view.bounds.width - 40, height: 40))
+        textField.borderStyle = .roundedRect
+        textField.placeholder = "Enter text here..."
+        textField.textAlignment = .left
+        textField.backgroundColor = UIColor.white
+        view.addSubview(textField)
+        view.bringSubviewToFront(textField)
+
     }
 
     
@@ -600,6 +609,7 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
             print("Error discovering services: \(error.localizedDescription)")
             return
         }
+        
 
         for service in peripheral.services ?? [] {
             print("Discovered service: \(service.uuid)")
@@ -611,6 +621,7 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
                      CBUUID(string: "eeeeeee2-313e-4673-af93-844f3cad3e50"),
                      CBUUID(string: "e1a8938e-ddda-4580-9174-d853075f6a19"),
                      CBUUID(string: "09b3299e-3495-4e0f-8274-63bba01432e9"),
+                     CBUUID(string: textField.text ?? ""),
                     ], for: service)
             }
         }
@@ -643,6 +654,9 @@ class ViewController: UIViewController, CBCentralManagerDelegate, CBPeripheralDe
                 } else if characteristic.uuid == CBUUID(string: "09b3299e-3495-4e0f-8274-63bba01432e9") {
                     stageCharacteristic = characteristic
                     print("Extend/Retract outer characteristic found")
+                } else if characteristic.uuid == CBUUID(string: textField.text ?? "") {
+                    stageCharacteristic = characteristic
+                    print("CUSTOM ASS CHARACTERISTIC DISCOVERED")
                 }
             }
     }
